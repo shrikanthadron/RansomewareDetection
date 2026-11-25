@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ransomshield_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ransomshield}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ransomshield_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-ransomshield}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ransomshield} -d ${POSTGRES_DB:-ransomshield}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ransomshield_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ransomshield}:${POSTGRES_PASSWORD:-ransomshield_dev_pass}@postgres:5432/${POSTGRES_DB:-ransomshield}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-in-production-env}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-120}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@ransomshield.dev}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-ChangeMeAdmin!2026}
+      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-Security Administrator}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
+      MAX_DATASET_SIZE_MB: ${MAX_DATASET_SIZE_MB:-100}
+      STORAGE_DIR: /app/storage
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_storage:/app/storage
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ransomshield_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_data:
+  app_storage:

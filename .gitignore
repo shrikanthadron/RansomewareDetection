@@ -1,0 +1,15 @@
+.env
+.pgdata/
+.pgdata_smoke/
+storage/
+storage_test/
+backend/.venv/
+backend/__pycache__/
+backend/.pytest_cache/
+**/__pycache__/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.pyc
+*.pyo
+*.log
